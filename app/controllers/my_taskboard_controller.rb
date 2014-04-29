@@ -9,6 +9,13 @@ class MyTaskboardController < ApplicationController
   end
 
   def index
+    where = ""
+    if ActiveRecord::Base.connection.adapter_name == 'MySQL'
+	where = "assigned_to_id = ? AND issue_statuses.is_closed == 0 AND projects.status = 1"
+    else
+	where = "assigned_to_id = ? AND not issue_statuses.is_closed AND projects.status = 1"
+    end
+
     issues = Issue.select( \
           "issues.id,
           issues.subject,
@@ -27,7 +34,7 @@ class MyTaskboardController < ApplicationController
         .joins('INNER JOIN trackers ON trackers.id = issues.tracker_id') \
         .joins('INNER JOIN projects ON projects.id = issues.project_id') \
         .joins('INNER JOIN enumerations issue_priority ON issues.priority_id = issue_priority.id') \
-        .where("assigned_to_id = ? AND issue_statuses.is_closed = 0 AND projects.status = 1", @user.id) \
+        .where(where, @user.id) \
         .order("weight ASC, issue_priority.position DESC")
     @not_prioritized = Array.new
     @prioritized = Array.new
